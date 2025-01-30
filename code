@@ -1,0 +1,63 @@
+#include <Wire.h>
+#include <RTClib.h>
+
+RTC_DS3231 rtc;
+
+const int buzzerPin = 9;        // Pin for the buzzer
+const int buttonPin = 2;        // Pin for the push button (connected to pin 2)
+
+// Set your desired target time (24-hour format)
+int targetHour = 22;            // Target hour (e.g., 22 for 10:00 PM)
+int targetMinute = 41;          // Target minute (e.g., 32 for 32nd minute)
+int targetSecond = 50;          // Target second (e.g., 0 for the start of the minute)
+
+bool buzzerOn = false;          // Flag to keep track of buzzer state
+
+void setup() {
+  pinMode(buzzerPin, OUTPUT);   // Set buzzer pin as output
+  pinMode(buttonPin, INPUT_PULLUP);  // Set button pin as input with internal pull-up resistor
+
+  Serial.begin(9600);
+
+  if (!rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);  // Halt execution if RTC is not found
+  }
+
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // Set RTC to compile time
+}
+
+void loop() {
+  DateTime now = rtc.now();  // Get current time
+
+  // Display the current time in Serial Monitor
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  Serial.print(now.day(), DEC);
+  Serial.print(" ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.print(now.second(), DEC);
+  Serial.println();
+
+  // Check if the current time matches the target time
+  if (now.hour() == targetHour && now.minute() == targetMinute && now.second() == targetSecond && !buzzerOn) {
+    digitalWrite(buzzerPin, HIGH);  // Turn on the buzzer
+    buzzerOn = true;  // Set the buzzer state to ON
+    Serial.println("Buzzer ON!");
+  }
+
+  // Check if the button is pressed (active-low, so LOW when pressed)
+  if (digitalRead(buttonPin) == LOW && buzzerOn) {
+    digitalWrite(buzzerPin, LOW);  // Turn off the buzzer
+    buzzerOn = false;  // Reset buzzer state
+    Serial.println("Button pressed! Buzzer OFF.");
+    delay(200);  // Debounce delay for button press
+  }
+
+  delay(1000);  // Wait 1 second before checking time again
+}
